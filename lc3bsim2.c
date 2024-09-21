@@ -431,12 +431,12 @@ void add_instruction(int instruction){
   int SR1 = (instruction >> 6) & 0x7;
   
   if ((instruction >> 5) & 0x1) {  // For immediate mode
-      int imm5 = instruction & 0x1F;
-      imm5 = sext(imm5, 4);  // Sext it
-      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + imm5);
+    int imm5 = instruction & 0x1F;
+    imm5 = sext(imm5, 4);  // Sext it
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + imm5);
   } else {  // For Register mode
-      int SR2 = instruction & 0x7;  // Source register 2
-      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2]);
+    int SR2 = instruction & 0x7;  // Source register 2
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2]);
   }
   set_condition_codes(DR);
 }
@@ -446,12 +446,12 @@ void and_instruction(int instruction) {
   int SR1 = (instruction >> 6) & 0x7;
   
   if ((instruction >> 5) & 0x1) {  // For immediate mode
-      int imm5 = instruction & 0x1F;
-      imm5 = sext(imm5, 4);  // Sext it
-      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & imm5);
+    int imm5 = instruction & 0x1F;
+    imm5 = sext(imm5, 4);  // Sext it
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & imm5);
   } else {  // For Register mode
-      int SR2 = instruction & 0x7;  // Source register 2
-      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
+    int SR2 = instruction & 0x7;  // Source register 2
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
   }
   set_condition_codes(DR);
 }
@@ -461,7 +461,7 @@ void br_instruction(int instruction) {
   int z = (instruction >> 10) & 0x1;
   int p = (instruction >> 9) & 0x1;
 
-  if((n && NEXT_LATCHES.N) || (p && NEXT_LATCHES.P) || (z && NEXT_LATCHES.P)){
+  if((n && CURRENT_LATCHES.N) || (p && CURRENT_LATCHES.P) || (z && CURRENT_LATCHES.P)){
     int offset9 = instruction & 0x01FF;
     NEXT_LATCHES.PC += (sext(offset9, 8) << 1);
   }
@@ -470,21 +470,21 @@ void br_instruction(int instruction) {
 void jmp_instruction(int instruction) {
   int BaseR = (instruction >> 6) & 0x7;
   if(BaseR == 15){ // JMP
-    NEXT_LATCHES.PC = NEXT_LATCHES.REGS[7];
+    NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
   } else {
-    NEXT_LATCHES.PC = NEXT_LATCHES.REGS[BaseR];
+    NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
   }
 }
 
 void jsr_instruction(int instruction) {
-  NEXT_LATCHES.PC = NEXT_LATCHES.REGS[7];
+  NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[7];
   int steer_bit = (instruction >> 11) & 0x1;
   if (steer_bit) {
     int offset11 = instruction & 0x07FF;
     NEXT_LATCHES.PC = (sext(instruction, 10) << 1);
   } else {
     int BaseR = (instruction >> 6) & 0x7;
-    NEXT_LATCHES.PC += NEXT_LATCHES.REGS[BaseR];
+    NEXT_LATCHES.PC += CURRENT_LATCHES.REGS[BaseR];
   }
 }
 
@@ -492,26 +492,25 @@ void ldb_instruction(int instruction) {
   int DR = (instruction >> 9) & 0x7;
   int BaseR = (instruction >> 6) & 0x7;
   int boffset6 = instruction & 0x3F;
-  
-  if ((instruction >> 5) & 0x1) {  // For immediate mode
-    MEMORY
-  } else {  // For Register mode
-    int SR2 = instruction & 0x7;  // Source register 2
-    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
-  }
+
+  NEXT_LATCHES.REGS[DR] = Low16bits(sext((MEMORY[CURRENT_LATCHES.REGS[BaseR] + sext(boffset6, 5)][0]) & 0x0FF, 7));
   set_condition_codes(DR);
 }
 
 void ldw_instruction(int instruction) {
+  int DR = (instruction >> 9) & 0x7;
+  int BaseR = (instruction >> 6) & 0x7;
+  int boffset6 = instruction & 0x3F;
 
+  NEXT_LATCHES.REGS[DR] = Low16bits(MEMORY[CURRENT_LATCHES.REGS[BaseR] + (sext(boffset6, 5) << 1)][0]);
+  NEXT_LATCHES.REGS[DR] |= MEMORY[CURRENT_LATCHES.REGS[BaseR] + (sext(boffset6, 5) << 1)][1];
+  set_condition_codes(DR);
 }
 
 void lea_instruction(int instruction) {
-
-}
-
-void rti_instruction(int instruction) {
-
+  int DR = (instruction >> 9) & 0x7;
+  int offset9 = instruction & 0x01FF;
+  NEXT_LATCHES.REGS[DR] = Low16bits(NEXT_LATCHES.PC + (sext(offset9, 8) << 1));
 }
 
 void shf_instruction(int instruction) {
