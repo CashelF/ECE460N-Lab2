@@ -522,7 +522,7 @@ void shf_instruction(int instruction) {
   if (steer_bits == 0) { // LSHF
     CURRENT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] << amount4);
   } else if (steer_bits == 1) { // RSHFL
-    CURRENT_LATCHES.REGS[DR] = Low16bits((unsigned int) CURRENT_LATCHES.REGS[SR] >> amount4);
+    CURRENT_LATCHES.REGS[DR] = Low16bits((int) ((unsigned int) CURRENT_LATCHES.REGS[SR] >> amount4));
   } else if (steer_bits == 3) { // RSHFA
     CURRENT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] >> amount4);
   }
