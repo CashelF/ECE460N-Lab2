@@ -544,7 +544,7 @@ void stb_instruction(int instruction) {
   int offset6 = instruction & 0x3F;
   int address = (CURRENT_LATCHES.REGS[BaseR] + sext(offset6, 5));
 
-  MEMORY[address >> 1][address & 0x1] = (CURRENT_LATCHES.REGS[SR] >> 8) & 0xFF;
+  MEMORY[address >> 1][address & 0x1] = CURRENT_LATCHES.REGS[SR] & 0xFF;
 }
 
 void stw_instruction(int instruction) {
