@@ -7,10 +7,12 @@
 
                 LEA R0, MULTIPLE
                 LDW R0, R0, #0
+                STB R2, R0, #0
                 LDB R0, R0, #0
 
                 LEA R1, MULTIPLIER
                 LDW R1, R1, #0
+                STB R3, R1, #0
                 LDB R1, R1, #0
 
                 AND R2, R2, #0  ; Result
@@ -43,6 +45,8 @@ STORE           LEA R4, RESULT
                 LEA R4, OVERFLOW
                 LDW R4, R4, #0
                 STB R3, R4, #0
+
+                HALT
 
 NUM1            .FILL x0001
 NUM2            .FILL x0003
