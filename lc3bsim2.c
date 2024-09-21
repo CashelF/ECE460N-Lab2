@@ -587,47 +587,47 @@ void process_instruction(){
   int opcode = (instruction >> 12) & 0xF;
 
   switch (opcode) {
-        case 0x1:  // ADD
-            add_instruction(instruction);
-            break;
-        case 0x5:  // AND
-            and_instruction(instruction);
-            break;
-        case 0x0:  // BR
-            br_instruction(instruction);
-            break;
-        case 0xC:  // JMP/RET
-            jmp_instruction(instruction);
-            break;
-        case 0x4:  // JSR/JSRR
-            jsr_instruction(instruction);
-            break;
-        case 0x2:  // LDB
-            ldb_instruction(instruction);
-            break;
-        case 0x6:  // LDW
-            ldw_instruction(instruction);
-            break;
-        case 0xE:  // LEA
-            lea_instruction(instruction);
-            break;
-        case 0xD:  // SHF
-            shf_instruction(instruction);
-            break;
-        case 0x3:  // STB
-            stb_instruction(instruction);
-            break;
-        case 0x7:  // STW
-            stw_instruction(instruction);
-            break;
-        case 0xF:  // TRAP
-            trap_instruction(instruction);
-            break;
-        case 0x9:  // XOR
-            xor_instruction(instruction);
-            break;
-        default:
-            printf("Unknown opcode: %x\n", opcode);
-            break;
-    }
+    case 0x1:  // ADD
+        add_instruction(instruction);
+        break;
+    case 0x5:  // AND
+        and_instruction(instruction);
+        break;
+    case 0x0:  // BR
+        br_instruction(instruction);
+        break;
+    case 0xC:  // JMP/RET
+        jmp_instruction(instruction);
+        break;
+    case 0x4:  // JSR/JSRR
+        jsr_instruction(instruction);
+        break;
+    case 0x2:  // LDB
+        ldb_instruction(instruction);
+        break;
+    case 0x6:  // LDW
+        ldw_instruction(instruction);
+        break;
+    case 0xE:  // LEA
+        lea_instruction(instruction);
+        break;
+    case 0xD:  // SHF
+        shf_instruction(instruction);
+        break;
+    case 0x3:  // STB
+        stb_instruction(instruction);
+        break;
+    case 0x7:  // STW
+        stw_instruction(instruction);
+        break;
+    case 0xF:  // TRAP
+        trap_instruction(instruction);
+        break;
+    case 0x9:  // XOR
+        xor_instruction(instruction);
+        break;
+    default:
+        printf("Unknown opcode: %x\n", opcode);
+        break;
+  }
 }
