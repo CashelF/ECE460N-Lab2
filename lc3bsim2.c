@@ -405,7 +405,134 @@ int main(int argc, char *argv[]) {
 
 /***************************************************************/
 
+void set_condition_codes(int DR){
+  if (NEXT_LATCHES.REGS[DR] == 0) {
+    NEXT_LATCHES.N = 0;
+    NEXT_LATCHES.Z = 1;
+    NEXT_LATCHES.P = 0;
+  } else if (NEXT_LATCHES.REGS[DR] & 0x8000) {  // Negative
+    NEXT_LATCHES.N = 1;
+    NEXT_LATCHES.Z = 0;
+    NEXT_LATCHES.P = 0;
+  } else {  // Positive
+    NEXT_LATCHES.N = 0;
+    NEXT_LATCHES.Z = 0;
+    NEXT_LATCHES.P = 1;
+  }
+}
 
+int sext(int num, int msb) {
+  int mask = 1 << (msb - 1);
+  return (num ^ mask) - mask;
+}
+
+void add_instruction(int instruction){
+  int DR = (instruction >> 9) & 0x7;
+  int SR1 = (instruction >> 6) & 0x7;
+  
+  if ((instruction >> 5) & 0x1) {  // For immediate mode
+      int imm5 = instruction & 0x1F;
+      imm5 = sext(imm5, 4);  // Sext it
+      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + imm5);
+  } else {  // For Register mode
+      int SR2 = instruction & 0x7;  // Source register 2
+      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2]);
+  }
+  set_condition_codes(DR);
+}
+
+void and_instruction(int instruction) {
+  int DR = (instruction >> 9) & 0x7;
+  int SR1 = (instruction >> 6) & 0x7;
+  
+  if ((instruction >> 5) & 0x1) {  // For immediate mode
+      int imm5 = instruction & 0x1F;
+      imm5 = sext(imm5, 4);  // Sext it
+      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & imm5);
+  } else {  // For Register mode
+      int SR2 = instruction & 0x7;  // Source register 2
+      NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
+  }
+  set_condition_codes(DR);
+}
+
+void br_instruction(int instruction) {
+  int n = (instruction >> 11) & 0x1;
+  int z = (instruction >> 10) & 0x1;
+  int p = (instruction >> 9) & 0x1;
+
+  if((n && NEXT_LATCHES.N) || (p && NEXT_LATCHES.P) || (z && NEXT_LATCHES.P)){
+    int offset9 = instruction & 0x01FF;
+    NEXT_LATCHES.PC += (sext(offset9, 8) << 1);
+  }
+}
+
+void jmp_instruction(int instruction) {
+  int BaseR = (instruction >> 6) & 0x7;
+  if(BaseR == 15){ // JMP
+    NEXT_LATCHES.PC = NEXT_LATCHES.REGS[7];
+  } else {
+    NEXT_LATCHES.PC = NEXT_LATCHES.REGS[BaseR];
+  }
+}
+
+void jsr_instruction(int instruction) {
+  NEXT_LATCHES.PC = NEXT_LATCHES.REGS[7];
+  int steer_bit = (instruction >> 11) & 0x1;
+  if (steer_bit) {
+    int offset11 = instruction & 0x07FF;
+    NEXT_LATCHES.PC = (sext(instruction, 10) << 1);
+  } else {
+    int BaseR = (instruction >> 6) & 0x7;
+    NEXT_LATCHES.PC += NEXT_LATCHES.REGS[BaseR];
+  }
+}
+
+void ldb_instruction(int instruction) {
+  int DR = (instruction >> 9) & 0x7;
+  int BaseR = (instruction >> 6) & 0x7;
+  int boffset6 = instruction & 0x3F;
+  
+  if ((instruction >> 5) & 0x1) {  // For immediate mode
+    MEMORY
+  } else {  // For Register mode
+    int SR2 = instruction & 0x7;  // Source register 2
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
+  }
+  set_condition_codes(DR);
+}
+
+void ldw_instruction(int instruction) {
+
+}
+
+void lea_instruction(int instruction) {
+
+}
+
+void rti_instruction(int instruction) {
+
+}
+
+void shf_instruction(int instruction) {
+
+}
+
+void stb_instruction(int instruction) {
+
+}
+
+void stw_instruction(int instruction) {
+
+}
+
+void trap_instruction(int instruction) {
+
+}
+
+void xor_instruction(int instruction) {
+
+}
 
 void process_instruction(){
   /*  function: process_instruction
@@ -417,4 +544,56 @@ void process_instruction(){
    *       -Update NEXT_LATCHES
    */     
 
+  int instruction = (MEMORY[CURRENT_LATCHES.PC >> 1][1] << 8) | MEMORY[CURRENT_LATCHES.PC >> 1][0];
+  NEXT_LATCHES.PC = CURRENT_LATCHES.PC + 2;
+
+  int opcode = (instruction >> 12) & 0xF;
+
+  switch (opcode) {
+        case 0x1:  // ADD
+            add_instruction(instruction);
+            break;
+        case 0x5:  // AND
+            and_instruction(instruction);
+            break;
+        case 0x0:  // BR
+            br_instruction(instruction);
+            break;
+        case 0xC:  // JMP/RET
+            jmp_instruction(instruction);
+            break;
+        case 0x4:  // JSR/JSRR
+            jsr_instruction(instruction);
+            break;
+        case 0x2:  // LDB
+            ldb_instruction(instruction);
+            break;
+        case 0x6:  // LDW
+            ldw_instruction(instruction);
+            break;
+        case 0xE:  // LEA
+            lea_instruction(instruction);
+            break;
+        case 0x8:  // RTI
+            rti_instruction(instruction);
+            break;
+        case 0xD:  // SHF
+            shf_instruction(instruction);
+            break;
+        case 0x3:  // STB
+            stb_instruction(instruction);
+            break;
+        case 0x7:  // STW
+            stw_instruction(instruction);
+            break;
+        case 0xF:  // TRAP
+            trap_instruction(instruction);
+            break;
+        case 0x9:  // XOR
+            xor_instruction(instruction);
+            break;
+        default:
+            printf("Unknown opcode: %x\n", opcode);
+            break;
+    }
 }
