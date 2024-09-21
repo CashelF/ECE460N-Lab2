@@ -514,23 +514,61 @@ void lea_instruction(int instruction) {
 }
 
 void shf_instruction(int instruction) {
+  int DR = (instruction >> 9) & 0x7;
+  int SR = (instruction >> 6) & 0x7;
+  int amount4 = instruction & 0xF;
+  int steer_bits = (instruction >> 4) & 0x3;
 
+  if (steer_bits == 0) { // LSHF
+    CURRENT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] << amount4);
+  } else if (steer_bits == 1) { // RSHFL
+    CURRENT_LATCHES.REGS[DR] = Low16bits((unsigned int) CURRENT_LATCHES.REGS[SR] >> amount4);
+  } else if (steer_bits == 3) { // RSHFA
+    CURRENT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] >> amount4);
+  }
 }
 
 void stb_instruction(int instruction) {
+  int SR = (instruction >> 9) & 0x7;
+  int BaseR = (instruction >> 6) & 0x7;
+  int offset6 = instruction & 0x3F;
+  int address = (CURRENT_LATCHES.REGS[BaseR] + sext(offset6, 5));
 
+  MEMORY[address >> 1][address & 0x1] = CURRENT_LATCHES.REGS[SR] >> 8;
 }
 
 void stw_instruction(int instruction) {
+  int SR = (instruction >> 9) & 0x7;
+  int BaseR = (instruction >> 6) & 0x7;
+  int offset6 = instruction & 0x3F;
+  int address = CURRENT_LATCHES.REGS[BaseR] + (sext(offset6, 5) << 1);
 
+  MEMORY[address >> 1][0] = CURRENT_LATCHES.REGS[SR] & 0xFF;
+  MEMORY[address >> 1][1] = (CURRENT_LATCHES.REGS[SR] >> 8) & 0xFF;
 }
 
 void trap_instruction(int instruction) {
+    int trapvect8 = instruction & 0xFF;
 
+    CURRENT_LATCHES.REGS[7] = CURRENT_LATCHES.PC;
+
+    CURRENT_LATCHES.PC = Low16bits(MEMORY[trapvect8][1] << 8 | MEMORY[trapvect8][0]);
 }
 
 void xor_instruction(int instruction) {
+  int DR = (instruction >> 9) & 0x7;
+  int SR1 = (instruction >> 6) & 0x7;
 
+  if ((instruction >> 5) & 0x1) { // Immediate
+    int imm5 = instruction & 0x1F;
+    imm5 = sext(imm5, 4);
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] ^ imm5);
+  } else {  // Register
+    int SR2 = instruction & 0x7;
+    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] ^ CURRENT_LATCHES.REGS[SR2]);
+  }
+
+  set_condition_codes(DR);
 }
 
 void process_instruction(){
@@ -572,9 +610,6 @@ void process_instruction(){
             break;
         case 0xE:  // LEA
             lea_instruction(instruction);
-            break;
-        case 0x8:  // RTI
-            rti_instruction(instruction);
             break;
         case 0xD:  // SHF
             shf_instruction(instruction);
