@@ -410,7 +410,7 @@ void set_condition_codes(int DR){
     NEXT_LATCHES.N = 0;
     NEXT_LATCHES.Z = 1;
     NEXT_LATCHES.P = 0;
-  } else if (NEXT_LATCHES.REGS[DR] & 0x8000) { // Negative
+  } else if (NEXT_LATCHES.REGS[DR] & 0x80) { // Negative
     NEXT_LATCHES.N = 1;
     NEXT_LATCHES.Z = 0;
     NEXT_LATCHES.P = 0;
@@ -422,7 +422,8 @@ void set_condition_codes(int DR){
 }
 
 int sext(int num, int msb) {
-  int mask = 1 << (msb - 1);
+  int mask = 1 << msb;
+
   return (num ^ mask) - mask;
 }
 
@@ -432,9 +433,15 @@ void add_instruction(int instruction){
   
   if ((instruction >> 5) & 0x1) { // Immediate
     int imm5 = instruction & 0x1F;
+
+    printf("Add DR: %d, SR1: %d, imm5: %d\n", DR, SR1, sext(imm5, 4));
+
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + sext(imm5, 4));
   } else { // Register
     int SR2 = instruction & 0x7;
+
+    printf("Add DR: %d, SR1: %d, SR2: %d\n", DR, SR1, SR2);
+
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] + CURRENT_LATCHES.REGS[SR2]);
   }
   
@@ -461,10 +468,29 @@ void br_instruction(int instruction) {
   int z = (instruction >> 10) & 0x1;
   int p = (instruction >> 9) & 0x1;
 
-  if((n && CURRENT_LATCHES.N) || (p && CURRENT_LATCHES.P) || (z && CURRENT_LATCHES.P)){
+  printf("BR\n");
+
+  if((n && CURRENT_LATCHES.N) || (z && CURRENT_LATCHES.Z) || (p && CURRENT_LATCHES.P)){
+    printf("Took branch\n");
     int offset9 = instruction & 0x01FF;
 
-    NEXT_LATCHES.PC += Low16bits(sext(offset9, 8) << 1);
+    printf("offset9: %x\n", offset9);
+
+    offset9 = sext(offset9, 8);
+
+    printf("sext(offset, 8): %x\n", offset9);
+
+    offset9 = offset9 << 1;
+
+    printf("(sext(offset, 8) << 1): %x\n", offset9);
+
+    printf("CURRENT_LATCHES.PC: %x\n", CURRENT_LATCHES.PC);
+
+    printf("NEXT LATCHES.PC: %x\n", NEXT_LATCHES.PC);
+
+    NEXT_LATCHES.PC += offset9;
+
+    printf("NEXT LATCHES.PC: %x\n", NEXT_LATCHES.PC);
   }
 }
 
@@ -531,11 +557,16 @@ void shf_instruction(int instruction) {
 
   if (steer_bits == 0) { // LSHF
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] << amount4);
+    printf("LSHF DR: %d, SR: %d, amount4: %d\n", DR, SR, amount4);
   } else if (steer_bits == 1) { // RSHFL
+    printf("RSHFL DR: %d, SR: %d, amount4: %d\n", DR, SR, amount4);
     NEXT_LATCHES.REGS[DR] = Low16bits((int) ((unsigned int) CURRENT_LATCHES.REGS[SR] >> amount4));
   } else if (steer_bits == 3) { // RSHFA
+    printf("RSHFA DR: %d, SR: %d, amount4: %d\n", DR, SR, amount4);
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] >> amount4);
   }
+
+  set_condition_codes(DR);
 }
 
 void stb_instruction(int instruction) {
