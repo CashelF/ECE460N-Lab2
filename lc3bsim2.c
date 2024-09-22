@@ -1,12 +1,8 @@
 /*
-    Remove all unnecessary lines (including this one) 
-    in this comment.
-    REFER TO THE SUBMISSION INSTRUCTION FOR DETAILS
-
-    Name 1: Full name of the first partner 
-    Name 2: Full name of the second partner
-    UTEID 1: UT EID of the first partner
-    UTEID 2: UT EID of the second partner
+	Name 1: Troy Dutton
+	Name 2: Cashel Fitzgerald
+	UTEID 1: thd432
+	UTEID 2: cpf499
 */
 
 /***************************************************************/
@@ -410,7 +406,7 @@ void set_condition_codes(int DR){
     NEXT_LATCHES.N = 0;
     NEXT_LATCHES.Z = 1;
     NEXT_LATCHES.P = 0;
-  } else if (NEXT_LATCHES.REGS[DR] & 0x80) { // Negative
+  } else if (NEXT_LATCHES.REGS[DR] & 0x8000) { // Negative
     NEXT_LATCHES.N = 1;
     NEXT_LATCHES.Z = 0;
     NEXT_LATCHES.P = 0;
@@ -450,9 +446,11 @@ void and_instruction(int instruction) {
   
   if ((instruction >> 5) & 0x1) { // Immediate
     int imm5 = instruction & 0x1F;
+
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & sext(imm5, 4));
   } else { // Register
     int SR2 = instruction & 0x7;
+
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR1] & CURRENT_LATCHES.REGS[SR2]);
   }
 
@@ -468,26 +466,26 @@ void br_instruction(int instruction) {
   if((n && CURRENT_LATCHES.N) || (z && CURRENT_LATCHES.Z) || (p && CURRENT_LATCHES.P)){
     int offset9 = instruction & 0x01FF;
 
-    NEXT_LATCHES.PC += sext(offset9, 8) << 1;
+    NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + (sext(offset9, 8) << 1));
   }
 }
 
 void jmp_instruction(int instruction) {
   int BaseR = (instruction >> 6) & 0x7;
 
-  NEXT_LATCHES.PC = CURRENT_LATCHES.REGS[BaseR];
+  NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.REGS[BaseR]);
 }
 
 void jsr_instruction(int instruction) {
-  int steer_bit = (instruction >> 11) & 0x1;
+  int steer_bit = (instruction >> 11) & 0x1;  
 
-  int temp = CURRENT_LATCHES.REGS[7];
+  int temp = NEXT_LATCHES.PC;
 
-  if (steer_bit) {
+  if (steer_bit) { // JSR
     int offset11 = instruction & 0x07FF;
 
-    NEXT_LATCHES.PC += sext(offset11, 10) << 1;
-  } else {
+    NEXT_LATCHES.PC = Low16bits(NEXT_LATCHES.PC + (sext(offset11, 10) << 1));
+  } else { // JSRR
     int BaseR = (instruction >> 6) & 0x7;
 
     NEXT_LATCHES.PC = Low16bits(CURRENT_LATCHES.REGS[BaseR]);
@@ -533,12 +531,12 @@ void shf_instruction(int instruction) {
   int amount4 = instruction & 0xF;
   int steer_bits = (instruction >> 4) & 0x3;
 
-  if (steer_bits == 0) { // LSHF
+  if (steer_bits == 0x0) { // LSHF
     NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] << amount4);
-  } else if (steer_bits == 1) { // RSHFL
+  } else if (steer_bits == 0x1) { // RSHFL
     NEXT_LATCHES.REGS[DR] = Low16bits((int) ((unsigned int) CURRENT_LATCHES.REGS[SR] >> amount4));
-  } else if (steer_bits == 3) { // RSHFA
-    NEXT_LATCHES.REGS[DR] = Low16bits(CURRENT_LATCHES.REGS[SR] >> amount4);
+  } else if (steer_bits == 0x3) { // RSHFA
+    NEXT_LATCHES.REGS[DR] = Low16bits(sext(CURRENT_LATCHES.REGS[SR], 15) >> amount4);
   }
 
   set_condition_codes(DR);
@@ -564,11 +562,11 @@ void stw_instruction(int instruction) {
 }
 
 void trap_instruction(int instruction) {
-    int trapvect8 = instruction & 0xFF;
+    int trapvect8 = (instruction & 0xFF) << 1;
 
-    NEXT_LATCHES.REGS[7] = CURRENT_LATCHES.PC;
+    NEXT_LATCHES.REGS[7] = NEXT_LATCHES.PC;
 
-    NEXT_LATCHES.PC = Low16bits(MEMORY[trapvect8][1] << 8 | MEMORY[trapvect8][0]);
+    NEXT_LATCHES.PC = Low16bits(MEMORY[trapvect8 >> 1][1] << 8 | MEMORY[trapvect8 >> 1][0]);
 }
 
 void xor_instruction(int instruction) {
