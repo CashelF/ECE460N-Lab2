@@ -486,7 +486,7 @@ void jsr_instruction(int instruction) {
   if (steer_bit) {
     int offset11 = instruction & 0x07FF;
 
-    NEXT_LATCHES.PC += sext(instruction, 10) << 1;
+    NEXT_LATCHES.PC += sext(offset11, 10) << 1;
   } else {
     int BaseR = (instruction >> 6) & 0x7;
 
